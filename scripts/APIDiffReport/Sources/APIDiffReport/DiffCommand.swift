@@ -1,9 +1,22 @@
 
 import Foundation
+import SwiftCLI
 
-struct ApiDiff {
+class DiffCommand: Command {
+    var name = "diff"
+    var shortDescription: String = "Runs a comparison between 2 JSON API logs and prints detected breaking changes."
     
-    static func runApiDiff(oldApiPath: URL, newApiPath: URL) throws -> Bool {
+    @Param var oldProjectPath: String
+    @Param var newProjectPath: String
+    
+    func execute() throws {
+        guard try runApiDiff(oldApiPath: absURL(oldProjectPath),
+                             newApiPath: absURL(newProjectPath)) else {
+            exit(1)
+        }
+    }
+    
+    private func runApiDiff(oldApiPath: URL, newApiPath: URL) throws -> Bool {
         let oldApi = try readJson(at: oldApiPath)
         let newApi = try readJson(at: newApiPath)
         let report = try diffreport(oldApi: oldApi, newApi: newApi)
@@ -21,7 +34,7 @@ struct ApiDiff {
         }
     }
     
-    static private func readJson(at path: URL) throws -> Any {
+    private func readJson(at path: URL) throws -> Any {
         let data = try Data(contentsOf: path)
         
         if !data.isEmpty {
