@@ -9,6 +9,13 @@ class DiffCommand: Command {
     @Param var oldProjectPath: String
     @Param var newProjectPath: String
     
+    @Flag("-i", "--ignore", description: "Flags if only documented symbols should be checked.")
+    var ignoreUndocumented: Bool
+    
+    @VariadicKey("-a", "--accessibility", description: "Include only entities with specified access level. May be repeated to contain mutilple values. Defaults to `public` and `open`.")
+    var accessLevels: [DiffReportOptions.Accessibility]
+    
+    
     func execute() throws {
         guard try runApiDiff(oldApiPath: absURL(oldProjectPath),
                              newApiPath: absURL(newProjectPath)) else {
@@ -17,7 +24,15 @@ class DiffCommand: Command {
     }
     
     private func runApiDiff(oldApiPath: URL, newApiPath: URL) throws -> Bool {
-        let diffReport = DiffReport(reportOptions: DiffReportOptions())
+        var options = DiffReportOptions()
+        options.ignoreUndocumented = ignoreUndocumented
+        if accessLevels.isEmpty {
+            options.accessibilityLevels = [DiffReportOptions.Accessibility.public, DiffReportOptions.Accessibility.open]
+        } else {
+            options.accessibilityLevels = accessLevels
+        }
+        
+        let diffReport = DiffReport(reportOptions: options)
         let oldApi = try readJson(at: oldApiPath)
         let newApi = try readJson(at: newApiPath)
         let report = try diffReport.generateReport(oldApi: oldApi, newApi: newApi)

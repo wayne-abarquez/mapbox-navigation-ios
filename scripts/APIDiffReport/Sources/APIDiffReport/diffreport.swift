@@ -301,10 +301,6 @@ struct DiffReport {
             switch key {
             case "key.usr":
                 if let accessibility = sourceKittenNode["key.accessibility"] {
-//                    if accessibility as! String != "source.lang.swift.accessibility.public" &&
-//                        accessibility as! String != "source.lang.swift.accessibility.open" {
-//                        continue
-//                    }
                     if !reportOptions.verifyAccessibility(accessibility as! String) {
                         continue
                     }
