@@ -17,9 +17,10 @@ class DiffCommand: Command {
     }
     
     private func runApiDiff(oldApiPath: URL, newApiPath: URL) throws -> Bool {
+        let diffReport = DiffReport(reportOptions: DiffReportOptions())
         let oldApi = try readJson(at: oldApiPath)
         let newApi = try readJson(at: newApiPath)
-        let report = try diffreport(oldApi: oldApi, newApi: newApi)
+        let report = try diffReport.generateReport(oldApi: oldApi, newApi: newApi)
         
         if report.isEmpty {
             print("No breaking changes detected!")
