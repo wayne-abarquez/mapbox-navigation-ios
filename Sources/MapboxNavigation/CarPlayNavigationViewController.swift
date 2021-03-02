@@ -22,6 +22,8 @@ public class CarPlayNavigationViewController: UIViewController, NavigationMapVie
             }
         }
     }
+
+    public weak var carPlayNavigationCameraDelegate: CarPlayNavigationCameraDelegate?
     
     public var carPlayManager: CarPlayManager
     
@@ -329,7 +331,8 @@ public class CarPlayNavigationViewController: UIViewController, NavigationMapVie
         
         // Update the user puck
         mapView?.updatePreferredFrameRate(for: routeProgress)
-        let camera = MGLMapCamera(lookingAtCenter: location.coordinate, altitude: 120, pitch: 60, heading: location.course)
+        // I think we should ask the delegate for this to override the camera (if desired)
+        let camera = carPlayNavigationCameraDelegate?.camera(for: self, routeProgress: routeProgress) ?? MGLMapCamera(lookingAtCenter: location.coordinate, altitude: 800, pitch: 35, heading: location.course)
         mapView?.updateCourseTracking(location: location, camera: camera, animated: true)
         
         let congestionLevel = routeProgress.averageCongestionLevelRemainingOnLeg ?? .unknown
@@ -592,4 +595,9 @@ public extension CarPlayNavigationDelegate {
     func carPlayNavigationViewControllerDidArrive(_ carPlayNavigationViewController: CarPlayNavigationViewController) {
         //no-op, deprecated method
     }
+}
+
+@available(iOS 12.0, *)
+public protocol CarPlayNavigationCameraDelegate: class, UnimplementedLogging {
+    func camera(for navigationMapView: CarPlayNavigationViewController, routeProgress: RouteProgress) -> MGLMapCamera?
 }
