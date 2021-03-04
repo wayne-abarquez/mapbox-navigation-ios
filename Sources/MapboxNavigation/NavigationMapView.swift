@@ -453,16 +453,53 @@ open class NavigationMapView: UIView {
                 initPrimaryRoutePoints(route: route)
             }
             
-            parentLayerIdentifier = addRouteLayer(route, below: parentLayerIdentifier, isMainRoute: index == 0)
-            parentLayerIdentifier = addRouteCasingLayer(route, below: parentLayerIdentifier, isMainRoute: index == 0)
+            parentLayerIdentifier = addRouteLayer(route, below: parentLayerIdentifier, isMainRoute: index == 0, legIndex: legIndex)
+            parentLayerIdentifier = addRouteCasingLayer(route, below: parentLayerIdentifier, isMainRoute: index == 0, legIndex: legIndex)
         }
     }
     
-    @discardableResult func addRouteLayer(_ route: Route, below parentLayerIndentifier: String? = nil, isMainRoute: Bool = true) -> String? {
-        guard let shape = route.shape else { return nil }
+    func shape(for route: Route, legIndex: Int?, isMainRoute: Bool = true) -> FeatureCollection? {
+        if isMainRoute {
+            let routeFeatures = route.congestionFeatures(legIndex: legIndex, roadClassesWithOverriddenCongestionLevels: roadClassesWithOverriddenCongestionLevels)
+            return FeatureCollection(features: routeFeatures)
+        } else {
+            if let shape = route.shape {
+                let routeFeature = Feature(shape)
+                return FeatureCollection(features: [routeFeature])
+            }
+        }
+        return nil
+    }
+
+    func shape(forCasingOf route: Route, legIndex: Int?, isMainRoute: Bool = true) -> FeatureCollection? {
+        if isMainRoute {
+            var casingFeatures = [Feature]()
+            for (index, leg) in route.legs.enumerated() {
+                let legCoordinates: [CLLocationCoordinate2D] = leg.steps.enumerated().reduce([]) { allCoordinates, current in
+                    let index = current.offset
+                    let step = current.element
+                    let stepCoordinates = step.shape!.coordinates
+                    return index == 0 ? stepCoordinates : allCoordinates + stepCoordinates.suffix(from: 1)
+                }
+                var feature = Feature(LineString(legCoordinates))
+                feature.properties = [CurrentLegAttribute: (legIndex != nil) ? index == legIndex : index == 0]
+                casingFeatures.append(feature)
+            }
+            return FeatureCollection(features:casingFeatures)
+        } else {
+            if let shape = route.shape {
+                let routeFeature = Feature(shape)
+                return FeatureCollection(features: [routeFeature])
+            }
+        }
+        return nil
+    }
+    
+    @discardableResult func addRouteLayer(_ route: Route, below parentLayerIndentifier: String? = nil, isMainRoute: Bool = true, legIndex: Int) -> String? {
+        guard let routeFeatures = delegate?.navigationMapView(self, shapeFor: route) ?? self.shape(for: route, legIndex: legIndex, isMainRoute: isMainRoute) else { return nil }
         
         var geoJSONSource = GeoJSONSource()
-        geoJSONSource.data = .geometry(.lineString(shape))
+        geoJSONSource.data = .featureCollection(routeFeatures)
         geoJSONSource.lineMetrics = true
         
         let sourceIdentifier = route.identifier(.source(isMainRoute: isMainRoute, isSourceCasing: true))
@@ -476,17 +513,36 @@ open class NavigationMapView: UIView {
         if lineLayer == nil {
             lineLayer = LineLayer(id: layerIdentifier)
             lineLayer?.source = sourceIdentifier
+            lineLayer?.filter = Exp(.eq) {
+                "$type"
+                "LineString"
+            }
             lineLayer?.paint?.lineColor = .constant(.init(color: trafficUnknownColor))
             lineLayer?.paint?.lineWidth = .expression(Expression.routeLineWidthExpression())
             lineLayer?.layout?.lineJoin = .round
             lineLayer?.layout?.lineCap = .round
             
             if isMainRoute {
-                let gradientStops = routeLineGradient(route.congestionFeatures(roadClassesWithOverriddenCongestionLevels: roadClassesWithOverriddenCongestionLevels),
+                let gradientStops = routeLineGradient(routeFeatures.features,
                                                       fractionTraveled: routeLineTracksTraversal ? fractionTraveled : 0.0)
                 lineLayer?.paint?.lineGradient = .expression((Expression.routeLineGradientExpression(gradientStops)))
+                let opacityExpression =  Exp(.switchCase) {
+                    Exp(.eq) {
+                        Exp(.get) { CurrentLegAttribute }
+                        true
+                    }
+                    1.0
+                    Exp(.eq) {
+                        Exp(.get) { CurrentLegAttribute }
+                        false
+                    }
+                    0.0
+                    1.0
+                }
+                lineLayer?.paint?.lineOpacity = .expression(opacityExpression)
             } else {
                 lineLayer?.paint?.lineColor = .constant(.init(color: routeAlternateColor))
+                lineLayer?.paint?.lineOpacity = .constant(1.0)
             }
         }
         
@@ -500,11 +556,11 @@ open class NavigationMapView: UIView {
         return layerIdentifier
     }
     
-    @discardableResult func addRouteCasingLayer(_ route: Route, below parentLayerIndentifier: String? = nil, isMainRoute: Bool = true) -> String? {
-        guard let shape = route.shape else { return nil }
+    @discardableResult func addRouteCasingLayer(_ route: Route, below parentLayerIndentifier: String? = nil, isMainRoute: Bool = true, legIndex: Int) -> String? {
+        guard let casingFeatures = delegate?.navigationMapView(self, shapeFor: route) ?? self.shape(forCasingOf: route, legIndex: legIndex, isMainRoute: isMainRoute) else { return nil }
         
         var geoJSONSource = GeoJSONSource()
-        geoJSONSource.data = .geometry(.lineString(shape))
+        geoJSONSource.data = .featureCollection(casingFeatures)
         geoJSONSource.lineMetrics = true
         
         let sourceIdentifier = route.identifier(.source(isMainRoute: isMainRoute, isSourceCasing: isMainRoute))
@@ -518,6 +574,11 @@ open class NavigationMapView: UIView {
         if lineLayer == nil {
             lineLayer = LineLayer(id: layerIdentifier)
             lineLayer?.source = sourceIdentifier
+            lineLayer?.filter = Exp(.eq){
+                "$type"
+                "LineString"
+            }
+
             lineLayer?.paint?.lineColor = .constant(.init(color: routeCasingColor))
             lineLayer?.paint?.lineWidth = .expression(Expression.routeLineWidthExpression(1.5))
             lineLayer?.layout?.lineJoin = .round
@@ -526,8 +587,23 @@ open class NavigationMapView: UIView {
             if isMainRoute {
                 let gradientStops = routeLineGradient(fractionTraveled: routeLineTracksTraversal ? fractionTraveled : 0.0)
                 lineLayer?.paint?.lineGradient = .expression(Expression.routeLineGradientExpression(gradientStops))
+                let opacityExpression =  Exp(.switchCase) {
+                    Exp(.eq) {
+                        Exp(.get) { CurrentLegAttribute }
+                        true
+                    }
+                    1.0
+                    Exp(.eq) {
+                        Exp(.get) { CurrentLegAttribute }
+                        false
+                    }
+                    0.85
+                    1.0
+                }
+                lineLayer?.paint?.lineOpacity = .expression(opacityExpression)
             } else {
                 lineLayer?.paint?.lineColor = .constant(.init(color: routeAlternateCasingColor))
+                lineLayer?.paint?.lineOpacity = .constant(1.0)
             }
         }
         

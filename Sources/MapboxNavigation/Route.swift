@@ -44,7 +44,6 @@ extension Route {
     }
     
     func congestionFeatures(legIndex: Int? = nil,
-                            isAlternativeRoute: Bool = false,
                             roadClassesWithOverriddenCongestionLevels: Set<MapboxStreetsRoadClass>? = nil) -> [Feature] {
         guard let coordinates = shape?.coordinates, let shape = shape else { return [] }
         var features: [Feature] = []
@@ -70,7 +69,6 @@ extension Route {
                     var feature = Feature(LineString(congestionSegment.0))
                     feature.properties = [
                         CongestionAttribute: String(describing: congestionSegment.1),
-                        "isAlternativeRoute": isAlternativeRoute,
                         CurrentLegAttribute: (legIndex != nil) ? index == legIndex : index == 0
                     ]
                     
@@ -79,7 +77,6 @@ extension Route {
             } else {
                 var feature = Feature(LineString(shape.coordinates))
                 feature.properties = [
-                    "isAlternativeRoute": isAlternativeRoute,
                     CurrentLegAttribute: (legIndex != nil) ? index == legIndex : index == 0
                 ]
                 legFeatures = [feature]
