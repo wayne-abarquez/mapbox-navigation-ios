@@ -62,6 +62,7 @@ class ViewController: UIViewController {
             navigationMapView.showsCongestionForAlternativeRoutes = true
             navigationMapView.show(routes)
             navigationMapView.showWaypoints(on: currentRoute)
+            navigationMapView.showRouteDurations(along: routes)
         }
     }
     
@@ -152,6 +153,7 @@ class ViewController: UIViewController {
         
         navigationMapView.unhighlightBuildings()
         navigationMapView.removeRoutes()
+        navigationMapView.removeRouteDurations()
         navigationMapView.removeWaypoints()
         waypoints.removeAll()
     }
