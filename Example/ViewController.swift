@@ -12,9 +12,7 @@ class ViewController: UIViewController {
     @IBOutlet weak var longPressHintView: UIView!
     @IBOutlet weak var simulationButton: UIButton!
     @IBOutlet weak var startButton: UIButton!
-    @IBOutlet weak var bottomBar: UIView!
     @IBOutlet weak var clearMap: UIButton!
-    @IBOutlet weak var bottomBarBackground: UIView!
     
     var trackStyledFeature: StyledFeature!
     var rawTrackStyledFeature: StyledFeature!
@@ -25,8 +23,6 @@ class ViewController: UIViewController {
     
     typealias RouteRequestSuccess = ((RouteResponse) -> Void)
     typealias RouteRequestFailure = ((Error) -> Void)
-    
-    private var foundAllBuildings = false
 
     var navigationMapView: NavigationMapView! {
         didSet {
@@ -104,7 +100,6 @@ class ViewController: UIViewController {
         setupPassiveLocationManager(navigationMapView)
         
         navigationMapView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        view.addSubview(navigationMapView)
         
         navigationMapView.delegate = self
         navigationMapView.mapView.on(.styleLoaded, handler: { [weak self] _ in
@@ -120,8 +115,7 @@ class ViewController: UIViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             if let coordinate = navigationMapView.mapView.locationManager.latestLocation?.coordinate {
                 navigationMapView.mapView.cameraManager.setCamera(to: CameraOptions(center: coordinate, zoom: 13),
-                                                                  animated: true,
-                                                                  completion: nil)
+                                                                  animated: true)
             }
         }
         
