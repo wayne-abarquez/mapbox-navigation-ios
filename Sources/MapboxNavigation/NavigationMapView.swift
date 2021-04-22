@@ -415,7 +415,7 @@ open class NavigationMapView: UIView {
                                                 coordinate.latitude,
                                                 mapView.bounds.size))
         
-        mapView.cameraOptions = CameraOptions(center: coordinate, zoom: zoom)
+        mapView.camera.setCamera(to: CameraOptions(center: coordinate, zoom: zoom), animated: false)
         updateUserCourseView(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude))
     }
 

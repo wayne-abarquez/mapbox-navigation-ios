@@ -41,8 +41,8 @@
         "package": "MapboxMaps",
         "repositoryURL": "https://github.com/mapbox/mapbox-maps-ios.git",
         "state": {
-          "branch": "main",
-          "revision": "a063b2cfa36b5e7ab79d1bf5eef1e308aa4275bb",
+          "branch": "nishantk/short-lived-camera-view-2",
+          "revision": "84c38c9390c62ffc6d9f576c243ecf4fa474053a",
           "version": null
         }
       },
