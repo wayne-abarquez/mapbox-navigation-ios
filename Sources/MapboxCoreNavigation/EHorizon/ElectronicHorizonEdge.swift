@@ -1,7 +1,7 @@
 import Foundation
 import MapboxNavigationNative
 
-extension ElectronicHorizon {
+public enum ElectronicHorizon {
 
     /**
      An edge in a routing graph. For example, an edge may represent a road segment between two intersections or between the two ends of a bridge. An edge may traverse multiple road objects, and a road object may be associated with multiple edges.
