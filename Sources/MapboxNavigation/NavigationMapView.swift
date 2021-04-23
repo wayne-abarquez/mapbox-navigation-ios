@@ -287,7 +287,7 @@ open class NavigationMapView: UIView {
      Updates the map view’s preferred frames per second to the appropriate value for the current route progress.
      
      This method accounts for the proximity to a maneuver and the current power source.
-     It has no effect if `NavigationCameraState` is in `.following` mode.
+     It has no effect if `NavigationCamera` is in `NavigationCameraState.following` state.
      
      - parameter routeProgress: Object, which stores current progress along specific route.
      */
