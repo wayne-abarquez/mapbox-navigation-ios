@@ -69,7 +69,11 @@ open class RouteController: NSObject {
     var previousArrivalWaypoint: MapboxDirections.Waypoint?
     
     var isFirstLocation: Bool = true
-    
+
+    var didVisitedWaypoint: Bool = false
+
+    let waypointArrivalDistanceThreshold: Double = 5
+
     /**
      Details about the user’s progress along the current route, leg, and step.
      */
@@ -324,19 +328,26 @@ open class RouteController: NSObject {
         if legProgress.remainingSteps.count <= 2 && remainingVoiceInstructions.count <= 2 {
             let willArrive = status.routeState == .tracking
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
-            
-            if willArrive {
-                delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
-            } else if didArrive {
+
+            if didVisitedWaypoint && legProgress.currentStepProgress.distanceRemaining >= waypointArrivalDistanceThreshold {
+                print("==DID ARRIVE AT==", routeProgress.legIndex)
+                didVisitedWaypoint = false;
+
                 previousArrivalWaypoint = currentDestination
                 legProgress.userHasArrivedAtWaypoint = true
-                
+
                 let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? DefaultBehavior.didArriveAtWaypoint
                 guard !routeProgress.isFinalLeg && advancesToNextLeg else {
                     return
                 }
                 let legIndex = Int(status.legIndex + 1)
                 updateRouteLeg(to: legIndex)
+            } else if willArrive {
+                print("==WILL ARIVE AT==")
+                delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
+            } else if didArrive {
+                print("==DID VISIT WAYPOINT", routeProgress.legIndex)
+                didVisitedWaypoint = true;
             }
         }
     }
