@@ -69,13 +69,18 @@ open class RouteController: NSObject {
     var previousArrivalWaypoint: MapboxDirections.Waypoint?
     
     var isFirstLocation: Bool = true
-
+    
     var didVisitedWaypoint: Bool = false
 
     let waypointArrivalDistanceThreshold: Double = 5
 
+    let waypointArrivalSecondsThreshold: Int = 8
+    
     var didArriveTimerElapsed: Int = 0
-
+      
+    var arriveTimer: Timer?
+    
+    
     /**
      Details about the user’s progress along the current route, leg, and step.
      */
@@ -263,12 +268,12 @@ open class RouteController: NSObject {
         updateSpokenInstructionProgress(status: status, willReRoute: willReroute)
         updateVisualInstructionProgress(status: status)
         
-        if willReroute {
-            reroute(from: location, along: routeProgress)
-        }
-        
-        // Check for faster route proactively (if reroutesProactively is enabled)
-        refreshAndCheckForFasterRoute(from: location, routeProgress: routeProgress)
+        //if willReroute {
+        //    reroute(from: location, along: routeProgress)
+        //}
+
+       // Check for faster route proactively (if reroutesProactively is enabled)
+       // refreshAndCheckForFasterRoute(from: location, routeProgress: routeProgress)
     }
     
     func updateIndexes(status: NavigationStatus, progress: RouteProgress) {
@@ -317,10 +322,6 @@ open class RouteController: NSObject {
             }
         }
     }
-
-    func startWaypointArrivalTimer() {
-        // didArriveTimerElapsed
-    }
     
     func updateRouteLegProgress(status: NavigationStatus) {
         let legProgress = routeProgress.currentLegProgress
@@ -334,39 +335,54 @@ open class RouteController: NSObject {
         if legProgress.remainingSteps.count <= 1 && remainingVoiceInstructions.count <= 1 {
             let willArrive = status.routeState == .tracking
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
-
-            if ( didVisitedWaypoint 
-                 && legProgress.currentStepProgress.distanceRemaining >= waypointArrivalDistanceThreshold 
-                 //&& didArriveTimerElapsed >= 5
-               ) 
+            
+            if ( 
+                 self.didVisitedWaypoint
+                 && legProgress.currentStepProgress.distanceRemaining >= self.waypointArrivalDistanceThreshold
+                 //&& self.didArriveTimerElapsed >= waypointArrivalSecondsThreshold
+               )
             {
-                print("==DID ARRIVE AT==", routeProgress.legIndex)
-                
-                // reset references
-                didVisitedWaypoint = false;
+                print("==DID ARRIVE AT==", routeProgress.legIndex, self.didArriveTimerElapsed)
 
+                // reset references
+                self.didVisitedWaypoint = false;
+                
                 // end timer here
+                // self.didArriveTimerElapsed = 0
+                // self.arriveTimer?.invalidate()
+                // self.arriveTimer = nil
 
                 previousArrivalWaypoint = currentDestination
                 legProgress.userHasArrivedAtWaypoint = true
-
+                
                 let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? DefaultBehavior.didArriveAtWaypoint
                 guard !routeProgress.isFinalLeg && advancesToNextLeg else {
                     return
                 }
+                
                 let legIndex = Int(status.legIndex + 1)
-                updateRouteLeg(to: legIndex)
+
+                DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) { 
+                    self.updateRouteLeg(to: legIndex)
+                }
             } else if willArrive {
                 print("==WILL ARIVE AT==")
                 delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
-            } else if (didArrive && legProgress.currentStepProgress.durationRemaining <= 3) {
-                print("==DID VISIT WAYPOINT", routeProgress.legIndex)
-                didVisitedWaypoint = true;
-
-                // start timer
-                // startWaypointArrivalTimer()
+            } else if didArrive && legProgress.currentStepProgress.durationRemaining <= 3 {
+                print("==DID VISIT WAYPOINT START TIMER", didArriveTimerElapsed)
+                
+                // self.didArriveTimerElapsed = 0
+                self.didVisitedWaypoint = true
+                
+                // if self.arriveTimer == nil {
+                //     self.arriveTimer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(startWaypointArrivalTimer), userInfo: nil, repeats: true)
+                // }
             }
         }
+    }
+    
+    @objc func startWaypointArrivalTimer() {
+         self.didArriveTimerElapsed += 1
     }
     
     private func update(progress: RouteProgress, with location: CLLocation, rawLocation: CLLocation, upcomingRouteAlerts routeAlerts: [UpcomingRouteAlert]) {
