@@ -359,7 +359,7 @@ open class RouteController: NSObject {
             } else if willArrive {
                 print("==WILL ARIVE AT==")
                 delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
-            } else if didArrive {
+            } else if (didArrive && legProgress.currentStepProgress.durationRemaining <= 3) {
                 print("==DID VISIT WAYPOINT", routeProgress.legIndex)
                 didVisitedWaypoint = true;
 
