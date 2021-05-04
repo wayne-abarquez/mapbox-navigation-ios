@@ -74,6 +74,8 @@ open class RouteController: NSObject {
 
     let waypointArrivalDistanceThreshold: Double = 5
 
+    var didArriveTimerElapsed: Int = 0
+
     /**
      Details about the user’s progress along the current route, leg, and step.
      */
@@ -315,6 +317,10 @@ open class RouteController: NSObject {
             }
         }
     }
+
+    func startWaypointArrivalTimer() {
+        // didArriveTimerElapsed
+    }
     
     func updateRouteLegProgress(status: NavigationStatus) {
         let legProgress = routeProgress.currentLegProgress
@@ -325,13 +331,21 @@ open class RouteController: NSObject {
         let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions ?? []
         
         // We are at least at the "You will arrive" instruction
-        if legProgress.remainingSteps.count <= 2 && remainingVoiceInstructions.count <= 2 {
+        if legProgress.remainingSteps.count <= 1 && remainingVoiceInstructions.count <= 1 {
             let willArrive = status.routeState == .tracking
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
 
-            if didVisitedWaypoint && legProgress.currentStepProgress.distanceRemaining >= waypointArrivalDistanceThreshold {
+            if ( didVisitedWaypoint 
+                 && legProgress.currentStepProgress.distanceRemaining >= waypointArrivalDistanceThreshold 
+                 //&& didArriveTimerElapsed >= 5
+               ) 
+            {
                 print("==DID ARRIVE AT==", routeProgress.legIndex)
+                
+                // reset references
                 didVisitedWaypoint = false;
+
+                // end timer here
 
                 previousArrivalWaypoint = currentDestination
                 legProgress.userHasArrivedAtWaypoint = true
@@ -348,6 +362,9 @@ open class RouteController: NSObject {
             } else if didArrive {
                 print("==DID VISIT WAYPOINT", routeProgress.legIndex)
                 didVisitedWaypoint = true;
+
+                // start timer
+                // startWaypointArrivalTimer()
             }
         }
     }
