@@ -332,7 +332,7 @@ open class RouteController: NSObject {
         let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions ?? []
         
         // We are at least at the "You will arrive" instruction
-        if legProgress.remainingSteps.count <= 1 && remainingVoiceInstructions.count <= 1 {
+        if legProgress.remainingSteps.count <= 2 && remainingVoiceInstructions.count <= 2 {
             let willArrive = status.routeState == .tracking
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
             
@@ -361,19 +361,15 @@ open class RouteController: NSObject {
                 }
                 
                 let legIndex = Int(status.legIndex + 1)
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) { 
-                    self.updateRouteLeg(to: legIndex)
-                }
+                self.updateRouteLeg(to: legIndex)
+                
             } else if willArrive {
                 print("==WILL ARIVE AT==")
                 delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
-            } else if didArrive && legProgress.currentStepProgress.durationRemaining <= 3 {
+            } else if didArrive && legProgress.currentStepProgress.durationRemaining <= 1 {
                 print("==DID VISIT WAYPOINT START TIMER", didArriveTimerElapsed)
-                
                 // self.didArriveTimerElapsed = 0
                 self.didVisitedWaypoint = true
-                
                 // if self.arriveTimer == nil {
                 //     self.arriveTimer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(startWaypointArrivalTimer), userInfo: nil, repeats: true)
                 // }
