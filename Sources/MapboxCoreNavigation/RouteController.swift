@@ -337,7 +337,7 @@ open class RouteController: NSObject {
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
             
             if ( 
-                 self.didVisitedWaypoint
+                 self.didVisitedWaypoint == true
                  && legProgress.currentStepProgress.distanceRemaining >= self.waypointArrivalDistanceThreshold
                  //&& self.didArriveTimerElapsed >= waypointArrivalSecondsThreshold
                )
@@ -366,7 +366,11 @@ open class RouteController: NSObject {
             } else if willArrive {
                 print("==WILL ARIVE AT==")
                 delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
-            } else if didArrive && legProgress.currentStepProgress.durationRemaining <= 1 {
+            } else if ( 
+                didArrive 
+                && self.didVisitedWaypoint == false 
+                && legProgress.currentStepProgress.distanceRemaining <= 2 
+            ) {
                 print("==DID VISIT WAYPOINT START TIMER", didArriveTimerElapsed)
                 
                 // self.didArriveTimerElapsed = 0
