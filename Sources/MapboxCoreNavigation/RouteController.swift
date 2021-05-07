@@ -260,11 +260,11 @@ open class RouteController: NSObject {
         // Notify observers if the step’s remaining distance has changed.
         update(progress: routeProgress, with: CLLocation(status.location), rawLocation: location, upcomingRouteAlerts: status.upcomingRouteAlerts)
         
-        // let willReroute = !userIsOnRoute(location, status: status) && delegate?.router(self, shouldRerouteFrom: location)
-        //     ?? DefaultBehavior.shouldRerouteFromLocation
+        let willReroute = !userIsOnRoute(location, status: status) && delegate?.router(self, shouldRerouteFrom: location)
+            ?? DefaultBehavior.shouldRerouteFromLocation
         
         updateIndexes(status: status, progress: routeProgress)
-        updateRouteLegProgress(status: status)
+        updateRouteLegProgress(status: status, rawLocation: location)
         updateSpokenInstructionProgress(status: status, willReRoute: willReroute)
         updateVisualInstructionProgress(status: status)
         
@@ -323,7 +323,7 @@ open class RouteController: NSObject {
         }
     }
     
-    func updateRouteLegProgress(status: NavigationStatus) {
+    func updateRouteLegProgress(status: NavigationStatus, rawLocation: CLLocation) {
         let legProgress = routeProgress.currentLegProgress
         
         guard let currentDestination = legProgress.leg.destination else {
@@ -332,23 +332,24 @@ open class RouteController: NSObject {
         let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions ?? []
         
         // We are at least at the "You will arrive" instruction
-        if legProgress.remainingSteps.count <= 2 && remainingVoiceInstructions.count <= 2 {
+        if legProgress.remainingSteps.count <= 1 && remainingVoiceInstructions.count <= 1 {
             let willArrive = status.routeState == .tracking
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
+            let legProgressCoordinate = CLLocationCoordinate2DMake(legProgress.leg.destination?.coordinate.latitude  as! CLLocationDegrees, legProgress.leg.destination?.coordinate.longitude as! CLLocationDegrees)
+            let distance = rawLocation.coordinate.distance(to: legProgressCoordinate)
+            
+            print("==DISTANCE==",distance)
             
             if ( 
                  self.didVisitedWaypoint == true
-                 && legProgress.currentStepProgress.distanceRemaining >= self.waypointArrivalDistanceThreshold
-                 //&& self.didArriveTimerElapsed >= waypointArrivalSecondsThreshold
+                 && distance >= self.waypointArrivalDistanceThreshold
                )
             {
-                print("==DID ARRIVE AT==", routeProgress.legIndex)
-               
-                // end timer here
-                // self.didArriveTimerElapsed = 0
-                // self.arriveTimer?.invalidate()
-                // self.arriveTimer = nil
+                print("==DID ARRIVE AT==", routeProgress.legIndex, status.routeState)
 
+                // reset references
+                self.didVisitedWaypoint = false;
+      
                 previousArrivalWaypoint = currentDestination
                 legProgress.userHasArrivedAtWaypoint = true
                 
@@ -358,20 +359,18 @@ open class RouteController: NSObject {
                 }
                 
                 let legIndex = Int(status.legIndex + 1)
-                self.updateRouteLeg(to: legIndex)
 
-                // reset references
-                self.didVisitedWaypoint = false;
+                self.updateRouteLeg(to: legIndex)
 
             } else if willArrive {
                 print("==WILL ARIVE AT==")
                 delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
-            } else if ( 
-                didArrive 
-                && self.didVisitedWaypoint == false 
-                && legProgress.currentStepProgress.distanceRemaining <= 2 
+            } else if (
+                didArrive
+                && self.didVisitedWaypoint == false
+                && legProgress.currentStepProgress.distanceRemaining <= 2
             ) {
-                print("==DID VISIT WAYPOINT START TIMER", didArriveTimerElapsed)
+                print("==DID VISIT WAYPOINT==", legProgress.currentStepProgress.distanceRemaining)
                 
                 // self.didArriveTimerElapsed = 0
                 self.didVisitedWaypoint = true
