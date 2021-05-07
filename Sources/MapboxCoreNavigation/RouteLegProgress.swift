@@ -185,6 +185,19 @@ open class RouteLegProgress: Codable {
         return currentClosest
     }
     
+    public func getDistanceTraveled(with location: CLLocation) -> Double {
+        //Increment the progress model
+        let polyline = leg.shape
+        if polyline == nil {
+            return 0
+        }
+        if let closestCoordinate = polyline.closestCoordinate(to: location.coordinate) {
+            let remainingDistance = polyline.distance(from: closestCoordinate.coordinate)!
+            return leg.distance - remainingDistance
+        }
+        return 0
+    }
+    
     /**
      The waypoints remaining on the current leg, not including the leg’s destination.
      */
