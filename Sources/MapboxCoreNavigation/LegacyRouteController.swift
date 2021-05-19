@@ -26,7 +26,7 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
      The threshold used when we determine when the user has arrived at the waypoint.
      By default, we claim arrival 5 seconds before the user is physically estimated to arrive.
      */
-    public var waypointArrivalThreshold: TimeInterval = 5.0
+    public var waypointArrivalThreshold: TimeInterval = 1.0
     
     public var reroutesProactively = true
     
@@ -37,6 +37,16 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
     var lastProactiveRerouteDate: Date?
     
     var lastRouteRefresh: Date?
+    
+    var didVisitedWaypoint: Bool = false
+
+    let waypointArrivalDistanceThreshold: Double = 10
+
+    let waypointArrivalSecondsThreshold: Int = 8
+    
+    var didArriveTimerElapsed: Int = 0
+      
+    var arriveTimer: Timer?
 
     public var routeProgress: RouteProgress {
         get {
@@ -318,19 +328,40 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
         guard let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions else {
             return
         }
-
+        
         // We are at least at the "You will arrive" instruction
         if legProgress.remainingSteps.count <= 1 && remainingVoiceInstructions.count <= 1 && currentDestination != previousArrivalWaypoint {
             //Have we actually arrived? Last instruction is "You have arrived"
-            if remainingVoiceInstructions.count == 0, legProgress.durationRemaining <= waypointArrivalThreshold {
-                previousArrivalWaypoint = currentDestination
-                legProgress.userHasArrivedAtWaypoint = true
-                
-                let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? RouteController.DefaultBehavior.didArriveAtWaypoint
-                
-                guard !routeProgress.isFinalLeg && advancesToNextLeg else { return }
-                advanceLegIndex()
-                updateDistanceToManeuver()
+            if self.didVisitedWaypoint {
+                let upcomingLeg = routeProgress.upcomingLeg
+                  if upcomingLeg != nil {
+                      let nextLegProgress = RouteLegProgress(leg: upcomingLeg!)
+                    let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: rawLocation!)
+                      if nextLegProgressDistanceTraveled >= self.waypointArrivalDistanceThreshold {
+                        previousArrivalWaypoint = currentDestination
+                        legProgress.userHasArrivedAtWaypoint = true
+                        self.didVisitedWaypoint = false;
+                        
+                        let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? RouteController.DefaultBehavior.didArriveAtWaypoint
+                        
+                        guard !routeProgress.isFinalLeg && advancesToNextLeg else { return }
+                        advanceLegIndex()
+                        updateDistanceToManeuver()
+                      }
+                  } else {
+                    previousArrivalWaypoint = currentDestination
+                    legProgress.userHasArrivedAtWaypoint = true
+                    self.didVisitedWaypoint = false;
+                    
+                    let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? RouteController.DefaultBehavior.didArriveAtWaypoint
+                    
+                    guard !routeProgress.isFinalLeg && advancesToNextLeg else { return }
+                    advanceLegIndex()
+                    updateDistanceToManeuver()
+                  }
+            } else if remainingVoiceInstructions.count == 0, legProgress.durationRemaining <= waypointArrivalThreshold {
+
+                self.didVisitedWaypoint = true
             } else { //we are approaching the destination
                 delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
             }

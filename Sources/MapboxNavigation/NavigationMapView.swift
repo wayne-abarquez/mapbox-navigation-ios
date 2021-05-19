@@ -383,7 +383,7 @@ open class NavigationMapView: MGLMapView, UIGestureRecognizerDelegate {
         tracksUserCourse = false
     }
     
-    public func updateCourseTracking(location: CLLocation?, camera: MGLMapCamera? = nil, animated: Bool = false) {
+    public func updateCourseTracking(location: CLLocation?, camera: MGLMapCamera? = nil, animated: Bool = false, course: CLLocation? = nil) {
         // While animating to overhead mode, don't animate the puck.
         let duration: TimeInterval = animated && !isAnimatingToOverheadMode ? 1 : 0
         animatesUserLocation = animated
@@ -391,6 +391,8 @@ open class NavigationMapView: MGLMapView, UIGestureRecognizerDelegate {
         guard let location = location, CLLocationCoordinate2DIsValid(location.coordinate) else {
             return
         }
+        
+        let newCourse = course != nil ? course!.course : location.course
         
         let centerUserCourseView = { [weak self] in
             guard let point = self?.convert(location.coordinate, toPointTo: self) else { return }
@@ -400,7 +402,7 @@ open class NavigationMapView: MGLMapView, UIGestureRecognizerDelegate {
         if tracksUserCourse {
             centerUserCourseView()
             
-            let newCamera = camera ?? MGLMapCamera(lookingAtCenter: location.coordinate, altitude: altitude, pitch: 45, heading: location.course)
+            let newCamera = camera ?? MGLMapCamera(lookingAtCenter: location.coordinate, altitude: altitude, pitch: 45, heading: newCourse)
             let function: CAMediaTimingFunction? = animated ? CAMediaTimingFunction(name: .linear) : nil
             setCamera(newCamera, withDuration: duration, animationTimingFunction: function, completionHandler: nil)
         } else {

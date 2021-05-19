@@ -72,7 +72,7 @@ open class RouteController: NSObject {
     
     var didVisitedWaypoint: Bool = false
 
-    let waypointArrivalDistanceThreshold: Double = 5
+    let waypointArrivalDistanceThreshold: Double = 15
 
     let waypointArrivalSecondsThreshold: Int = 8
     
@@ -336,7 +336,7 @@ open class RouteController: NSObject {
         let remainingVoiceInstructions = legProgress.currentStepProgress.remainingSpokenInstructions ?? []
         
         // We are at least at the "You will arrive" instruction
-        if legProgress.remainingSteps.count <= 1 && remainingVoiceInstructions.count <= 1 {
+        if legProgress.remainingSteps.count <= 2 && remainingVoiceInstructions.count <= 2 {
             let willArrive = status.routeState == .tracking
             let didArrive = status.routeState == .complete && currentDestination != previousArrivalWaypoint
 
@@ -347,41 +347,15 @@ open class RouteController: NSObject {
             print("==STEP DISTANCE REMAINING==",legProgress.currentStepProgress.distanceRemaining," DURATION REMAINING ",legProgress.currentStepProgress.durationRemaining)
             print("==RAW LOCATI DISTANCE==",distance)
             print("==STATUS LOC DISTANCE==",statusDistance)
-            
-//            print("==DISTANCE==",distance)
-            
-//            if (
-//                 self.didVisitedWaypoint == true
-//                 && statusDistance >= self.waypointArrivalDistanceThreshold
-//               )
-//            {
-//                                        print("==DID ARRIVE AT==", routeProgress.legIndex, status.routeState)
-//
-//                                        // reset references
-//                                        self.didVisitedWaypoint = false;
-//
-//                                        previousArrivalWaypoint = currentDestination
-//                                        legProgress.userHasArrivedAtWaypoint = true
-//
-//                                        let advancesToNextLeg = delegate?.router(self, didArriveAt: currentDestination) ?? DefaultBehavior.didArriveAtWaypoint
-//                                        guard !routeProgress.isFinalLeg && advancesToNextLeg else {
-//                                            return
-//                                        }
-//
-//                                        let legIndex = Int(status.legIndex + 1)
-//
-//                                        self.updateRouteLeg(to: legIndex)
-//            }
-  
+              
             if (
                 self.didVisitedWaypoint == true
-                && legProgress.currentStepProgress.distanceRemaining <= 1
                )
             {
                 let upcomingLeg = routeProgress.upcomingLeg
                 if upcomingLeg != nil {
                     let nextLegProgress = RouteLegProgress(leg: upcomingLeg!)
-                    let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: statusLocation)
+                    let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: rawLocation)
 
                     print("==NEXT LEG DISTANCE TRAVELED==",nextLegProgressDistanceTraveled)
 
