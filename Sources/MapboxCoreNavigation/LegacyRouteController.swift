@@ -334,10 +334,18 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             //Have we actually arrived? Last instruction is "You have arrived"
             if self.didVisitedWaypoint {
                 let upcomingLeg = routeProgress.upcomingLeg
+                let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: rawLocation!)
+                
+                let currentLegEndpointCoordinate = legProgress.leg.destination?.coordinate
+                                // next waypoint startpoint
+                let nextLegStartpointCoordinate = nextLegProgress.leg.source?.coordinate
+                // distance from the current waypoint end point to the next waypoint starting point
+                let distanceToNextWaypoint = currentLegEndpointCoordinate!.distance(to: nextLegStartpointCoordinate ?? currentLegEndpointCoordinate!)
+                
                   if upcomingLeg != nil {
                       let nextLegProgress = RouteLegProgress(leg: upcomingLeg!)
                     let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: rawLocation!)
-                      if nextLegProgressDistanceTraveled >= self.waypointArrivalDistanceThreshold {
+                      if (nextLegProgressDistanceTraveled >= self.waypointArrivalDistanceThreshold) || (distanceToNextWaypoint <= 15  && nextLegStartpointCoordinate != nil) {
                         previousArrivalWaypoint = currentDestination
                         legProgress.userHasArrivedAtWaypoint = true
                         self.didVisitedWaypoint = false;
