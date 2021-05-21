@@ -340,12 +340,12 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
                                 // next waypoint startpoint
                 let nextLegStartpointCoordinate = nextLegProgress.leg.source?.coordinate
                 // distance from the current waypoint end point to the next waypoint starting point
-                let distanceToNextWaypoint = currentLegEndpointCoordinate!.distance(to: nextLegStartpointCoordinate ?? currentLegEndpointCoordinate!)
+                let distanceToNextWaypoint = nextLegProgress.leg.distance
                 
                   if upcomingLeg != nil {
                       let nextLegProgress = RouteLegProgress(leg: upcomingLeg!)
                     let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: rawLocation!)
-                      if (nextLegProgressDistanceTraveled >= self.waypointArrivalDistanceThreshold) || (distanceToNextWaypoint <= 15  && nextLegStartpointCoordinate != nil) {
+                      if (nextLegProgressDistanceTraveled >= self.waypointArrivalDistanceThreshold) || (distanceToNextWaypoint <= 10  && nextLegStartpointCoordinate != nil && nextLegProgressDistanceTraveled >= 5) {
                         previousArrivalWaypoint = currentDestination
                         legProgress.userHasArrivedAtWaypoint = true
                         self.didVisitedWaypoint = false;
@@ -367,7 +367,9 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
                     advanceLegIndex()
                     updateDistanceToManeuver()
                   }
-            } else if remainingVoiceInstructions.count == 0, legProgress.durationRemaining <= waypointArrivalThreshold {
+            } else if remainingVoiceInstructions.count == 0
+            && legProgress.durationRemaining <= waypointArrivalThreshold
+            && userCourseIsOnRoute(rawLocation){
 
                 self.didVisitedWaypoint = true
             } else { //we are approaching the destination
