@@ -334,17 +334,16 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
             //Have we actually arrived? Last instruction is "You have arrived"
             if self.didVisitedWaypoint {
                 let upcomingLeg = routeProgress.upcomingLeg
-                let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: rawLocation!)
-                
-                let currentLegEndpointCoordinate = legProgress.leg.destination?.coordinate
-                                // next waypoint startpoint
-                let nextLegStartpointCoordinate = nextLegProgress.leg.source?.coordinate
-                // distance from the current waypoint end point to the next waypoint starting point
-                let distanceToNextWaypoint = nextLegProgress.leg.distance
-                
+
                   if upcomingLeg != nil {
-                      let nextLegProgress = RouteLegProgress(leg: upcomingLeg!)
+                    let nextLegProgress = RouteLegProgress(leg: upcomingLeg!)
                     let nextLegProgressDistanceTraveled = nextLegProgress.getDistanceTraveled(with: rawLocation!)
+                    let currentLegEndpointCoordinate = legProgress.leg.destination?.coordinate
+                                    // next waypoint startpoint
+                    let nextLegStartpointCoordinate = nextLegProgress.leg.source?.coordinate
+                    // distance from the current waypoint end point to the next waypoint starting point
+                    let distanceToNextWaypoint = nextLegProgress.leg.distance
+                    
                       if (nextLegProgressDistanceTraveled >= self.waypointArrivalDistanceThreshold) || (distanceToNextWaypoint <= 10  && nextLegStartpointCoordinate != nil && nextLegProgressDistanceTraveled >= 5) {
                         previousArrivalWaypoint = currentDestination
                         legProgress.userHasArrivedAtWaypoint = true
@@ -369,8 +368,7 @@ open class LegacyRouteController: NSObject, Router, InternalRouter, CLLocationMa
                   }
             } else if remainingVoiceInstructions.count == 0
             && legProgress.durationRemaining <= waypointArrivalThreshold
-            && userCourseIsOnRoute(rawLocation){
-
+            && userCourseIsOnRoute(rawLocation!){
                 self.didVisitedWaypoint = true
             } else { //we are approaching the destination
                 delegate?.router(self, willArriveAt: currentDestination, after: legProgress.durationRemaining, distance: legProgress.distanceRemaining)
